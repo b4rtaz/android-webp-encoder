@@ -57,5 +57,6 @@ public class WebpBitmapEncoder {
 
     public void close() throws IOException {
         _muxer.close();
+        _outputStream.close();
     }
 }

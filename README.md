@@ -17,6 +17,10 @@ Project doesn't contain VP8 codec because Android from version 4.x supports WebP
     encoder.writeFrame(frame2, 80);
     encoder.close();
 
+## TODO
+
+- alpha channel.
+
 ## License
 
 WebpEncoder is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT).
