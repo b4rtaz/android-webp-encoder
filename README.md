@@ -17,6 +17,8 @@ Project doesn't contain VP8 codec because Android from version 4.x supports WebP
     encoder.writeFrame(frame2, 80);
     encoder.close();
 
+Check [this example](app/src/main/java/com/n4no/webpencoder/app/MainActivity.java).
+
 ## TODO
 
 - alpha channel.
