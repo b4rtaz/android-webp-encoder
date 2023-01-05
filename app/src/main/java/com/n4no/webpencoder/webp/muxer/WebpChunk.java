@@ -27,6 +27,8 @@ public class WebpChunk {
 	public boolean useAlphaBlending;
 	public boolean disposeToBackgroundColor;
 
+	public byte[] alphaData;
+
 	public WebpChunk(WebpChunkType t) {
 		type = t;
 	}
