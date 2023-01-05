@@ -1,5 +1,7 @@
 package com.n4no.webpencoder.webp.muxer;
 
+import android.util.Log;
+
 import com.n4no.webpencoder.webp.muxer.stream.SeekableOutputStream;
 
 import java.io.IOException;
@@ -87,7 +89,15 @@ public class WebpContainerWriter {
 
 	private void writeAnmf(WebpChunk chunk) throws IOException {
 		write(new byte[] { 'A', 'N', 'M', 'F' });
-		writeUInt32(chunk.payload.length + 24);
+
+		// if ALPH chunk present, get size
+		int AlphaSize = 0;
+		if(chunk.alphaData != null){
+			AlphaSize = 4 + 4 + chunk.alphaData.length;
+			// 4 bytes (ALPH header) + 4 bytes (chunk size) + length of Alpha BitStream
+		}
+
+		writeUInt32(chunk.payload.length + 24 + AlphaSize);
 
 		writeUInt24(chunk.x); // 3 bytes (3)
 		writeUInt24(chunk.y); // 3 bytes (6)
@@ -100,12 +110,23 @@ public class WebpContainerWriter {
 		bs.set(0, chunk.disposeToBackgroundColor);
 		write(bitSetToBytes(bs, 1)); // 1 byte (16)
 
+		// Insert ALPH chunk
+		if(chunk.alphaData != null){
+			writeAlph(chunk.alphaData);
+		}
+
 		if (chunk.isLossless)
 			write(new byte[] { 'V', 'P', '8', 'L' }); // 4 bytes (20)
 		else
 			write(new byte[] { 'V', 'P', '8', ' ' });
 		writeUInt32(chunk.payload.length); // 4 bytes (24)
 		write(chunk.payload);
+	}
+
+	private void writeAlph(byte[] alphaData) throws IOException {
+		write(new byte[] { 'A', 'L', 'P', 'H' }); // 4
+		writeUInt32(alphaData.length); // 4
+		write(alphaData); // x
 	}
 
 	//

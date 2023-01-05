@@ -1,5 +1,8 @@
 package com.n4no.webpencoder.webp.muxer;
 
+import android.util.Log;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -52,6 +55,10 @@ public class WebpContainerReader {
 				return readAnim();
 			if (isFourCc(fcc, 'A', 'N', 'M', 'F'))
 				return readAnmf();
+			if (isFourCc(fcc, 'I', 'C', 'C', 'P'))
+				return readIccp();
+			if (isFourCc(fcc, 'A', 'L', 'P', 'H'))
+				return readAlph();
 
 			throw new IOException(String.format("Not supported FourCC: %c.%c.%c.%c.",
 					fcc[0], fcc[1], fcc[2], fcc[3]));
@@ -61,6 +68,24 @@ public class WebpContainerReader {
 			throw new IOException(String.format("Header has wrong file size: %d, expected: %d", 
 					_fileSize, _offset));
 		return null;
+	}
+
+	private WebpChunk readAlph() throws IOException {
+		int chunkSize = readUInt32();
+		WebpChunk chunk = new WebpChunk(WebpChunkType.ALPH);
+		chunk.alphaData = readPayload(chunkSize);
+		chunk.hasAlpha = true;
+		return chunk;
+	}
+
+	private WebpChunk readIccp() throws IOException {
+		int chunkSize = readUInt32();
+		WebpChunk chunk = new WebpChunk(WebpChunkType.ICCP);
+
+		readPayload(chunkSize);
+		// no need to store the payload to this chunk as Animated Webp does not require ICCP
+
+		return chunk;
 	}
 
 	private WebpChunk readVp8x() throws IOException {
@@ -74,11 +99,12 @@ public class WebpContainerReader {
 		read(flags, 4);
 		BitSet bs = BitSet.valueOf(flags);
 
-		chunk.hasIccp = bs.get(0);
-		chunk.hasAnim = bs.get(1);
-		chunk.hasExif = bs.get(2);
-		chunk.hasXmp = bs.get(3);
-		chunk.hasAlpha = bs.get(4);
+		bs.get(0); 					 // R reserved
+		chunk.hasAnim	= bs.get(1); // A Animation
+		chunk.hasXmp	= bs.get(2); // X XMP
+		chunk.hasExif	= bs.get(3); // E Exif
+		chunk.hasAlpha	= bs.get(4); // L Alpha
+		chunk.hasIccp	= bs.get(5); // I ICCP
 
 		chunk.width = readUInt24();
 		chunk.height = readUInt24();
@@ -110,7 +136,10 @@ public class WebpContainerReader {
 
 		WebpChunk chunk = new WebpChunk(WebpChunkType.VP8L);
 		chunk.isLossless = true;
-		chunk.payload = readPayload(chunkSize);
+//		chunkSize is not telling the correct size of payload to read.
+//		chunk.payload = readPayload(chunkSize);
+//		So reading all bytes remained (Max 1024 bytes)
+		chunk.payload = readAllBytes();
 
 		debug(String.format("VP8L: bytes = %d", chunkSize));
 		return chunk;
@@ -193,6 +222,17 @@ public class WebpContainerReader {
 		return h[0] == a && h[1] == b && h[2] == c && h[3] == d;
 	}
 
+	private byte[] readAllBytes() throws IOException {
+		try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+			byte[] buffer = new byte[1024];
+			int numRead;
+			while ((numRead = _inputStream.read(buffer)) != -1) {
+				outputStream.write(buffer, 0, numRead);
+				_offset += numRead;
+			}
+			return outputStream.toByteArray();
+		}
+	}
 	private void debug(String message) {
 		if (_debug)
 			System.out.println(message);

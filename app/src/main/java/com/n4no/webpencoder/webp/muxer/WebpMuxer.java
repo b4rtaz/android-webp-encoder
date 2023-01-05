@@ -1,5 +1,7 @@
 package com.n4no.webpencoder.webp.muxer;
 
+import android.util.Log;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -15,6 +17,9 @@ public class WebpMuxer {
     private int _duration = -1;
     private int _width;
     private int _height;
+
+    private byte[] _alphaData;
+    private boolean _hasAlpha;
 
     public WebpMuxer(WebpContainerWriter writer) {
         _writer = writer;
@@ -42,13 +47,13 @@ public class WebpMuxer {
         WebpChunk chunk = readFirstChunkWithPayload(reader);
         reader.close();
 
-        writeFrame(chunk.payload, chunk.isLossless);
+        writeFrame(chunk, chunk.payload, chunk.isLossless);
     }
 
-    public void writeFrame(byte[] payload, boolean isLossless) throws IOException {
+    public void writeFrame(WebpChunk chunk,byte[] payload, boolean isLossless) throws IOException {
         if (_isFirstFrame) {
             _isFirstFrame = false;
-            writeHeader();
+            writeHeader(chunk);
         }
 
         if (hasAnim())
@@ -70,18 +75,25 @@ public class WebpMuxer {
     private WebpChunk readFirstChunkWithPayload(WebpContainerReader reader) throws IOException {
         WebpChunk chunk;
         while ((chunk = reader.read()) != null) {
+
+            if (chunk.type == WebpChunkType.ALPH)
+                _alphaData = chunk.alphaData;
+
+            if (chunk.type == WebpChunkType.VP8X)
+                _hasAlpha = chunk.hasAlpha;
+
             if (chunk.payload != null)
                 return chunk;
         }
         throw new IOException("Can not find chunk with payload.");
     }
 
-    private void writeHeader() throws IOException {
+    private void writeHeader(WebpChunk chunk) throws IOException {
         _writer.writeHeader();
 
         WebpChunk vp8x = new WebpChunk(WebpChunkType.VP8X);
         vp8x.hasAnim = hasAnim();
-        vp8x.hasAlpha = false;
+        vp8x.hasAlpha = _hasAlpha;
         vp8x.hasXmp = false;
         vp8x.hasExif = false;
         vp8x.hasIccp = false;
@@ -110,6 +122,8 @@ public class WebpMuxer {
 
         anmf.useAlphaBlending = false;
         anmf.disposeToBackgroundColor = false;
+
+        anmf.alphaData = _alphaData;
 
         _writer.write(anmf);
     }
