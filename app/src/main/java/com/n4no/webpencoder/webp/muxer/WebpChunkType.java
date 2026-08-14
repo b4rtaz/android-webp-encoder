@@ -9,5 +9,6 @@ public enum WebpChunkType {
 	VP8,
 	VP8L,
 	ANIM,
-	ANMF
+	ANMF,
+	ALPH
 }

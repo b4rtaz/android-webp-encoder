@@ -49,6 +49,9 @@ public class WebpContainerWriter {
 		case ANMF:
 			writeAnmf(chunk);
 			break;
+		case ALPH:
+			writePayloadChunk(chunk, new byte[] { 'A', 'L', 'P', 'H' });
+			break;
 		default:
 			throw new IOException("Not supported chunk type.");
 		}

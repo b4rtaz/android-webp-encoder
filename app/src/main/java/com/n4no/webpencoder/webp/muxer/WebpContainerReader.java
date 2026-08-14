@@ -52,6 +52,8 @@ public class WebpContainerReader {
 				return readAnim();
 			if (isFourCc(fcc, 'A', 'N', 'M', 'F'))
 				return readAnmf();
+			if (isFourCc(fcc, 'A', 'L', 'P', 'H'))
+				return readAlph();
 
 			throw new IOException(String.format("Not supported FourCC: %c.%c.%c.%c.",
 					fcc[0], fcc[1], fcc[2], fcc[3]));
@@ -160,6 +162,14 @@ public class WebpContainerReader {
 
 		debug(String.format("ANMF: size = %dx%d, offset = %dx%d, duration = %d, bytes = %d",
 				chunk.width, chunk.height, chunk.x, chunk.y, chunk.duration, payloadSize));
+		return chunk;
+	}
+
+	private WebpChunk readAlph() throws IOException {
+		int chunkSize = readUInt32();
+		WebpChunk chunk = new WebpChunk(WebpChunkType.ALPH);
+		chunk.payload = readPayload(chunkSize);
+		debug(String.format("ALPH: bytes = %d", chunkSize));
 		return chunk;
 	}
 
